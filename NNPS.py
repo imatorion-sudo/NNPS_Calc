@@ -9,6 +9,56 @@ import pandas as pd
 
 # ページ設定
 st.set_page_config(page_title="Advanced NNPS Analyzer", layout="wide")
+st.markdown("""
+    <style>
+    /* メイン背景に深いネイビーのグラデーションを適用 */
+    .stApp {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: #f8fafc;
+    }
+    
+    /* サイドバーのデザイン */
+    [data-testid="stSidebar"] {
+        background-color: rgba(15, 23, 42, 0.8);
+        border-right: 1px solid #334155;
+    }
+
+    /* ボタンを光る青色に */
+    .stButton>button {
+        background-color: #3b82f6;
+        color: white;
+        border-radius: 8px;
+        border: none;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        background-color: #2563eb;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+    }
+
+    /* カード風のコンテナ */
+    div.stMetric, div[data-testid="stExpander"], .stPlotlyChart {
+        background-color: rgba(30, 41, 59, 0.5);
+        border-radius: 12px;
+        padding: 15px;
+        border: 1px solid #334155;
+    }
+
+    /* 作成者欄のネオン風装飾 */
+    .developer-footer {
+        font-family: 'JetBrains Mono', 'Courier New', monospace;
+        padding: 15px;
+        border-radius: 10px;
+        background: linear-gradient(45deg, #1e293b, #0f172a);
+        color: #38bdf8;
+        text-align: center;
+        border: 1px solid #38bdf8;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # --- カスタムCSSで作成者欄を装飾 ---
 st.markdown("""
