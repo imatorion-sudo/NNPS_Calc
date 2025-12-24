@@ -187,4 +187,4 @@ if uploaded_file is not None:
             st.dataframe(df_result, height=200)
 
 # フッター
-st.caption("© 2026 Wiener Spectrum Analyzer Project | Created by Masato Imahana @Nihon Institute of Medical Science")
+st.caption("© 2025 Noise Power Spectrum Analyzer Project | Created by Masato Imahana @Nihon Institute of Medical Science")
