@@ -35,9 +35,9 @@ st.write("© 2026 NNPS解析ツール |  Copyright ©　今花仁人/日本医�
 # サイドバー：作成者情報
 st.sidebar.markdown("""
     <div class='developer-footer'>
-        SYSTEM VERSION 2.5<br>
+        SYSTEM VERSION 1.0<br>
         DEVELOPED BY:<br>
-        [ Your Name ]<br>
+        [ Masato Imahana ]<br>
         RT / Image Engineering
     </div>
     """, unsafe_allow_html=True)
