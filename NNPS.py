@@ -10,7 +10,7 @@ import pandas as pd
 st.set_page_config(page_title="Advanced NNPS Analyzer", layout="wide")
 
 st.title("NNPS解析ツール　関東DR研究会")
-st.write("Ver1.0")
+st.write("© 2026 NNPS解析ツール |  Copyright ©　今花仁人/日本医療科学大学　　All Rights Reserved ")
 
 # トレンド除去関数
 def remove_trend(roi):
@@ -121,4 +121,4 @@ if uploaded_file is not None:
             )
             st.dataframe(df_result, height=200) # 簡易テーブル表示
 
-st.caption("© 2026 Wiener Spectrum Analyzer Project | Created by Masato Imahana @ ")
+st.caption("© 2026 Wiener Spectrum Analyzer Project | Created by Masato Imahana @Nihon Institute of Medical Science")
