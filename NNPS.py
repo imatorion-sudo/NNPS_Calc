@@ -9,8 +9,8 @@ import pandas as pd
 
 st.set_page_config(page_title="Advanced NNPS Analyzer", layout="wide")
 
-st.title("🏥 診療放射線技師向け：次世代NNPS解析ツール")
-st.write("2Dマップ評価、対話型グラフ、データ出力に対応しています。")
+st.title("NNPS解析ツール　関東DR研究会")
+st.write("Ver1.0")
 
 # トレンド除去関数
 def remove_trend(roi):
@@ -120,3 +120,11 @@ if uploaded_file is not None:
                 mime='text/csv',
             )
             st.dataframe(df_result, height=200) # 簡易テーブル表示
+
+with st.sidebar.expander("About This Tool"):
+    st.write("""
+        本ツールは、デジタルX線画像における粒状性評価（NNPS）を
+        客観的に行うために開発されました。
+        - **Author:** Your Name
+        - **Contact:** your-email@example.com
+    """)
