@@ -121,10 +121,4 @@ if uploaded_file is not None:
             )
             st.dataframe(df_result, height=200) # 簡易テーブル表示
 
-with st.sidebar.expander("About This Tool"):
-    st.write("""
-        本ツールは、デジタルX線画像における粒状性評価（NNPS）を
-        客観的に行うために開発されました。
-        - **Author:** Your Name
-        - **Contact:** your-email@example.com
-    """)
+st.caption("© 2026 Wiener Spectrum Analyzer Project | Created by Masato Imahana @ ")
