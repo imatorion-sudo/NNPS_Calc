@@ -3,3 +3,5 @@ pydicom
 numpy
 matplotlib
 scipy
+plotly
+pandas
