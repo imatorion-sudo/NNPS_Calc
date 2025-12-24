@@ -44,7 +44,8 @@ st.sidebar.markdown("""
 
 st.sidebar.divider()
 roi_size = st.sidebar.select_slider("ROIサイズ", options=[64, 128, 256], value=128)
-st.sidebar.info("u軸とv軸の比較機能を搭載しました。")
+st.sidebar.info("2025.12.24　NNPS解析ツール　v1.0　リリース")
+st.sidebar.info("2025.12.25　u軸とv軸の比較機能を搭載しました。")
 
 # トレンド除去関数
 def remove_trend(roi):
