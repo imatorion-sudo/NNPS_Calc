@@ -80,7 +80,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("NNPS解析ツール　関東DR研究会")
-st.write("© 2026 NNPS解析ツール |  Copyright ©　関東DR研究会　　All Rights Reserved ")
+st.write("© 2026 NNPS解析ツール |  Copyright ©　関東DR研究会　All Rights Reserved ")
 
 # サイドバー：作成者情報
 st.sidebar.markdown("""
