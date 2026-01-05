@@ -22,7 +22,7 @@ st.markdown("""
 
 # サイドバー
 with st.sidebar:
-    st.markdown("<div class='developer-footer'>ANALYSIS SYSTEM v3.0<br>DEVELOPED BY: YOUR NAME</div>", unsafe_allow_html=True)
+    st.markdown("<div class='developer-footer'>ANALYSIS SYSTEM v3.0<br>DEVELOPED BY: MASATO IMAHANA</div>", unsafe_allow_html=True)
     st.divider()
     st.header("⚙️ Settings")
     file_type = st.radio("File Format", ["DICOM", "Raw (Binary)"])
