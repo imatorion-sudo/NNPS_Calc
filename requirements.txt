@@ -1,6 +1,6 @@
 streamlit
-pydicom
 numpy
+pydicom
 matplotlib
 scipy
 plotly
