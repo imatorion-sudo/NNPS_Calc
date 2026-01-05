@@ -7,97 +7,38 @@ from scipy import optimize
 import io
 import pandas as pd
 
-# ページ設定
+# 1. ページ基本設定
 st.set_page_config(page_title="Advanced NNPS Analyzer", layout="wide")
+
+# 2. デザイン (CSS)
 st.markdown("""
     <style>
-    /* メイン背景に深いネイビーのグラデーションを適用 */
-    .stApp {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        color: #f8fafc;
-    }
-    
-    /* サイドバーのデザイン */
-    [data-testid="stSidebar"] {
-        background-color: rgba(15, 23, 42, 0.8);
-        border-right: 1px solid #334155;
-    }
-
-    /* ボタンを光る青色に */
-    .stButton>button {
-        background-color: #3b82f6;
-        color: white;
-        border-radius: 8px;
-        border: none;
-        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
-        transition: all 0.3s ease;
-    }
-    .stButton>button:hover {
-        background-color: #2563eb;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
-    }
-
-    /* カード風のコンテナ */
-    div.stMetric, div[data-testid="stExpander"], .stPlotlyChart {
-        background-color: rgba(30, 41, 59, 0.5);
-        border-radius: 12px;
-        padding: 15px;
-        border: 1px solid #334155;
-    }
-
-    /* 作成者欄のネオン風装飾 */
-    .developer-footer {
-        font-family: 'JetBrains Mono', 'Courier New', monospace;
-        padding: 15px;
-        border-radius: 10px;
-        background: linear-gradient(45deg, #1e293b, #0f172a);
-        color: #38bdf8;
-        text-align: center;
-        border: 1px solid #38bdf8;
-        box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
-    }
+    .stApp { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #f8fafc; }
+    [data-testid="stSidebar"] { background-color: rgba(15, 23, 42, 0.9); border-right: 1px solid #334155; }
+    .stButton>button { background-color: #3b82f6; color: white; border-radius: 8px; width: 100%; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
+    .developer-footer { font-family: 'Courier New', monospace; padding: 15px; border-radius: 10px; background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- カスタムCSSで作成者欄を装飾 ---
-st.markdown("""
-    <style>
-    .reportview-container {
-        background: #f0f2f6
-    }
-    .developer-footer {
-        font-family: 'Courier New', Courier, monospace;
-        padding: 10px;
-        border-radius: 5px;
-        background-color: #1e1e1e;
-        color: #00ff00;
-        text-align: center;
-        border: 1px solid #333;
-        margin-top: 20px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# 3. サイドバー作成者欄
+st.sidebar.markdown(f"<div class='developer-footer'>ANALYSIS SYSTEM v3.0<br>----------<br>DEVELOPED BY:<br><strong>YOUR NAME</strong></div>", unsafe_allow_html=True)
 
-st.title("NNPS解析ツール　関東DR研究会")
-st.write("© 2026 NNPS解析ツール |  Copyright ©　関東DR研究会　All Rights Reserved ")
+# 4. 解析・読み込み設定
+st.sidebar.header("📁 読み込み設定")
+file_type = st.sidebar.radio("ファイル形式", ["DICOM", "Raw (Binary)"])
 
-# サイドバー：作成者情報
-st.sidebar.markdown("""
-    <div class='developer-footer'>
-        SYSTEM VERSION 1.0<br>
-        DEVELOPED BY:<br>
-        [ Masato Imahana ]<br>
-        RT / Image Engineering
-    </div>
-    """, unsafe_allow_html=True)
+if file_type == "Raw (Binary)":
+    width = st.sidebar.number_input("画像幅 (Width)", value=2048)
+    height = st.sidebar.number_input("画像高さ (Height)", value=2048)
+    dtype = st.sidebar.selectbox("データ型", ["uint16", "int16", "float32"], index=0)
+    byte_order = st.sidebar.selectbox("バイト並び", ["Little Endian (<)", "Big Endian (>)"], index=0)
+    pixel_spacing = st.sidebar.number_input("画素サイズ (mm)", value=0.1, format="%.4f")
+else:
+    roi_size = st.sidebar.select_slider("ROIサイズ", options=[64, 128, 256], value=128)
 
-st.sidebar.divider()
-roi_size = st.sidebar.select_slider("ROIサイズ", options=[64, 128, 256], value=128)
-st.sidebar.info("2025.12.24　NNPS解析ツール　v1.0　リリース")
-st.sidebar.info("2025.12.25　u軸とv軸の比較機能を搭載しました。")
+st.title("🏥 Multi-format NNPS Analyzer")
 
-# トレンド除去関数
+# --- 関数群 ---
 def remove_trend(roi):
     y, x = np.indices(roi.shape)
     def surface_model(data, a, b, c, d, e, f):
@@ -110,81 +51,78 @@ def remove_trend(roi):
     except:
         return roi - np.mean(roi)
 
-uploaded_file = st.file_uploader("DICOMファイルを選択してください", type=["dcm"])
+# --- メイン処理 ---
+uploaded_file = st.file_uploader("ファイルをアップロードしてください", type=["dcm", "raw", "bin", "img"])
 
 if uploaded_file is not None:
-    ds = pydicom.dcmread(io.BytesIO(uploaded_file.read()))
-    image = ds.pixel_array.astype(float)
+    image = None
     
-    # 画素サイズの取得
-    pixel_spacing = float(ds.ImagerPixelSpacing[0]) if 'ImagerPixelSpacing' in ds else 0.1
+    # DICOM読み込み
+    if file_type == "DICOM":
+        ds = pydicom.dcmread(io.BytesIO(uploaded_file.read()))
+        image = ds.pixel_array.astype(float)
+        pixel_spacing = float(ds.ImagerPixelSpacing[0]) if 'ImagerPixelSpacing' in ds else 0.1
     
-    if st.button("解析開始"):
-        with st.spinner('u軸/v軸の同時解析を実行中...'):
-            h, w = image.shape
-            avg_signal = np.mean(image)
-            step = roi_size // 2
-            
-            nps_accumulator = []
-            for y in range(0, h - roi_size, step):
-                for x in range(0, w - roi_size, step):
-                    roi = image[y:y+roi_size, x:x+roi_size]
-                    roi_detrended = remove_trend(roi)
-                    window = np.outer(np.hamming(roi_size), np.hamming(roi_size))
-                    fft_roi = np.fft.fftshift(np.fft.fft2(roi_detrended * window))
-                    w_norm = np.sum(window**2) / (roi_size**2)
-                    ps = (np.abs(fft_roi)**2) * (pixel_spacing**2) / (roi_size**2 * w_norm)
-                    nps_accumulator.append(ps)
-            
-            mean_nps = np.mean(nps_accumulator, axis=0)
-            nnps_2d = mean_nps / (avg_signal**2)
-            
-            # 周波数軸の設定
-            freqs = np.fft.fftshift(np.fft.fftfreq(roi_size, d=pixel_spacing))
-            center = roi_size // 2
-            freq_1d = freqs[center:]
-            
-            # u軸(水平)とv軸(垂直)を抽出
-            u_axis_nnps = nnps_2d[center, center:]
-            v_axis_nnps = nnps_2d[center:, center]
+    # Raw読み込み
+    else:
+        raw_data = uploaded_file.read()
+        dt = np.dtype(dtype)
+        dt = dt.newbyteorder('<' if "Little" in byte_order else '>')
+        try:
+            image = np.frombuffer(raw_data, dtype=dt).reshape((height, width)).astype(float)
+        except Exception as e:
+            st.error(f"Rawデータの展開に失敗しました。サイズ設定を確認してください: {e}")
 
-            # --- 表示 ---
-            col1, col2 = st.columns(2)
+    if image is not None:
+        st.success(f"読み込み成功: {image.shape[1]}x{image.shape[0]} px")
+        
+        # ROIサイズ選択（Raw時も必要なのでここに配置）
+        roi_size = st.select_slider("解析ROIサイズ", options=[64, 128, 256], value=128, key="main_roi")
 
-            with col1:
-                st.subheader("🖼️ 2D NNPS Map (Log Scale)")
-                fig_2d, ax_2d = plt.subplots()
-                im = ax_2d.imshow(np.log10(nnps_2d + 1e-15), 
-                                 extent=[freqs[0], freqs[-1], freqs[0], freqs[-1]],
-                                 cmap='viridis')
-                ax_2d.set_xlabel("u (cycles/mm)")
-                ax_2d.set_ylabel("v (cycles/mm)")
-                plt.colorbar(im, ax=ax_2d)
-                st.pyplot(fig_2d)
-
-            with col2:
-                st.subheader("📈 u-v Axis Comparison (Interactive)")
-                fig_1d = go.Figure()
-                # u軸（水平方向）
-                fig_1d.add_trace(go.Scatter(x=freq_1d[1:], y=u_axis_nnps[1:], mode='lines+markers', name='u-axis (Horizontal)'))
-                # v軸（垂直方向）
-                fig_1d.add_trace(go.Scatter(x=freq_1d[1:], y=v_axis_nnps[1:], mode='lines+markers', name='v-axis (Vertical)'))
+        if st.button("RUN ANALYSIS"):
+            with st.spinner('Analyzing...'):
+                h, w = image.shape
+                avg_signal = np.mean(image)
+                step = roi_size // 2
                 
-                fig_1d.update_xaxes(type="log", title="Spatial Frequency (cycles/mm)")
-                fig_1d.update_yaxes(type="log", title="NNPS (mm^2)")
-                fig_1d.update_layout(height=500, legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99))
-                st.plotly_chart(fig_1d, use_container_width=True)
+                nps_accumulator = []
+                for y in range(0, h - roi_size, step):
+                    for x in range(0, w - roi_size, step):
+                        roi = image[y:y+roi_size, x:x+roi_size]
+                        roi_detrended = remove_trend(roi)
+                        window = np.outer(np.hamming(roi_size), np.hamming(roi_size))
+                        fft_roi = np.fft.fftshift(np.fft.fft2(roi_detrended * window))
+                        w_norm = np.sum(window**2) / (roi_size**2)
+                        ps = (np.abs(fft_roi)**2) * (pixel_spacing**2) / (roi_size**2 * w_norm)
+                        nps_accumulator.append(ps)
+                
+                mean_nps = np.mean(nps_accumulator, axis=0)
+                nnps_2d = mean_nps / (avg_signal**2)
+                freqs = np.fft.fftshift(np.fft.fftfreq(roi_size, d=pixel_spacing))
+                center = roi_size // 2
+                freq_1d = freqs[center:]
+                u_nnps = nnps_2d[center, center:]
+                v_nnps = nnps_2d[center:, center]
 
-            # --- データ出力 ---
-            st.divider()
-            df_result = pd.DataFrame({
-                "Frequency(lp/mm)": freq_1d[1:],
-                "u-axis_NNPS": u_axis_nnps[1:],
-                "v-axis_NNPS": v_axis_nnps[1:]
-            })
-            csv = df_result.to_csv(index=False).encode('utf-8')
-            st.download_button(label="解析結果(CSV)を保存", data=csv, file_name="nnps_uv_result.csv", mime='text/csv')
-            st.dataframe(df_result, height=200)
+                # グラフ表示
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.subheader("2D NNPS Map")
+                    fig2, ax2 = plt.subplots(facecolor='#0f172a')
+                    ax2.set_facecolor('#0f172a')
+                    im = ax2.imshow(np.log10(nnps_2d + 1e-15), extent=[freqs[0], freqs[-1], freqs[0], freqs[-1]], cmap='viridis')
+                    ax2.tick_params(colors='white')
+                    plt.colorbar(im)
+                    st.pyplot(fig2)
 
-# フッター
-st.caption("© 2025 Noise Power Spectrum Analyzer Project | Created by Masato Imahana @Nihon Institute of Medical Science")
+                with c2:
+                    st.subheader("u-v Axis Comparison")
+                    fig1 = go.Figure()
+                    fig1.add_trace(go.Scatter(x=freq_1d[1:], y=u_nnps[1:], name='u-axis (H)', line=dict(color='#38bdf8')))
+                    fig1.add_trace(go.Scatter(x=freq_1d[1:], y=v_nnps[1:], name='v-axis (V)', line=dict(color='#fb7185')))
+                    fig1.update_layout(template="plotly_dark", xaxis_type="log", yaxis_type="log", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                    st.plotly_chart(fig1, use_container_width=True)
+
+                # エクスポート
+                df = pd.DataFrame({"Freq_lp_mm": freq_1d[1:], "u_NNPS": u_nnps[1:], "v_NNPS": v_nnps[1:]})
+                st.download_button("Download CSV", df.to_csv(index=False).encode('utf-8'), f"nps_{uploaded_file.name}.csv", "text/csv")
