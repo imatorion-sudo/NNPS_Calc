@@ -39,7 +39,7 @@ with st.sidebar:
     roi_size = st.select_slider("ROI Size", options=[64, 128, 256], value=128)
 
 # メイン画面
-st.title("🏥 Advanced NNPS Analyzer")
+st.title("Advanced NNPS Analyzer")
 
 def remove_trend(roi):
     y, x = np.indices(roi.shape)
