@@ -7,35 +7,39 @@ from scipy import optimize
 import io
 import pandas as pd
 
-# 1. ページ基本設定
-st.set_page_config(page_title="Advanced NNPS Analyzer", layout="wide")
+# 1. ページ基本設定（一番最初に書く必要があります）
+st.set_page_config(page_title="Multi-format NNPS Analyzer", layout="wide")
 
-# 2. デザイン (CSS)
+# --- 背景・デザインのカスタマイズ (CSS) ---
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #f8fafc; }
-    [data-testid="stSidebar"] { background-color: rgba(15, 23, 42, 0.9); border-right: 1px solid #334155; }
-    .stButton>button { background-color: #3b82f6; color: white; border-radius: 8px; width: 100%; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
-    .developer-footer { font-family: 'Courier New', monospace; padding: 15px; border-radius: 10px; background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; text-align: center; }
+    [data-testid="stSidebar"] { background-color: rgba(15, 23, 42, 0.9) !important; border-right: 1px solid #334155; }
+    .developer-footer { font-family: 'Courier New', monospace; padding: 10px; border-radius: 10px; background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; text-align: center; font-size: 0.8em; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. サイドバー作成者欄
-st.sidebar.markdown(f"<div class='developer-footer'>ANALYSIS SYSTEM v3.0<br>----------<br>DEVELOPED BY:<br><strong>YOUR NAME</strong></div>", unsafe_allow_html=True)
+# 2. サイドバーの設定（ここからサイドバーの記述）
+with st.sidebar:
+    st.markdown("<div class='developer-footer'>SYSTEM v3.0<br>DEVELOPED BY: YOUR NAME</div>", unsafe_allow_html=True)
+    st.divider()
+    
+    st.header("⚙️ 読み込み設定")
+    file_type = st.radio("ファイル形式を選択", ["DICOM", "Raw (Binary)"])
+    
+    if file_type == "Raw (Binary)":
+        st.subheader("Raw Parameter")
+        width = st.number_input("画像幅 (Width)", value=2048)
+        height = st.number_input("画像高さ (Height)", value=2048)
+        dtype_choice = st.selectbox("データ型", ["uint16", "int16", "float32"])
+        byte_order = st.selectbox("バイト並び", ["Little Endian (<)", "Big Endian (>)"])
+        raw_pixel_spacing = st.number_input("画素サイズ (mm)", value=0.1, format="%.4f")
+    
+    st.divider()
+    roi_size = st.select_slider("解析ROIサイズ", options=[64, 128, 256], value=128)
+    st.info("サイドバーで設定を行い、中央画面でファイルをアップロードしてください。")
 
-# 4. 解析・読み込み設定
-st.sidebar.header("📁 読み込み設定")
-file_type = st.sidebar.radio("ファイル形式", ["DICOM", "Raw (Binary)"])
-
-if file_type == "Raw (Binary)":
-    width = st.sidebar.number_input("画像幅 (Width)", value=2048)
-    height = st.sidebar.number_input("画像高さ (Height)", value=2048)
-    dtype = st.sidebar.selectbox("データ型", ["uint16", "int16", "float32"], index=0)
-    byte_order = st.sidebar.selectbox("バイト並び", ["Little Endian (<)", "Big Endian (>)"], index=0)
-    pixel_spacing = st.sidebar.number_input("画素サイズ (mm)", value=0.1, format="%.4f")
-else:
-    roi_size = st.sidebar.select_slider("ROIサイズ", options=[64, 128, 256], value=128)
-
+# 3. メイン画面の表示
 st.title("🏥 Multi-format NNPS Analyzer")
 
 # --- 関数群 ---
@@ -48,39 +52,39 @@ def remove_trend(roi):
     try:
         popt, _ = optimize.curve_fit(surface_model, (x.ravel(), y.ravel()), roi.ravel(), p0=p0)
         return roi - surface_model((x, y), *popt)
-    except:
-        return roi - np.mean(roi)
+    except: return roi - np.mean(roi)
 
-# --- メイン処理 ---
+# --- ファイルアップロード処理 ---
 uploaded_file = st.file_uploader("ファイルをアップロードしてください", type=["dcm", "raw", "bin", "img"])
 
 if uploaded_file is not None:
     image = None
+    pixel_spacing = 0.1 # デフォルト値
     
-    # DICOM読み込み
-    if file_type == "DICOM":
-        ds = pydicom.dcmread(io.BytesIO(uploaded_file.read()))
-        image = ds.pixel_array.astype(float)
-        pixel_spacing = float(ds.ImagerPixelSpacing[0]) if 'ImagerPixelSpacing' in ds else 0.1
-    
-    # Raw読み込み
-    else:
-        raw_data = uploaded_file.read()
-        dt = np.dtype(dtype)
-        dt = dt.newbyteorder('<' if "Little" in byte_order else '>')
-        try:
+    # 読み込み処理
+    try:
+        if file_type == "DICOM":
+            ds = pydicom.dcmread(io.BytesIO(uploaded_file.read()))
+            image = ds.pixel_array.astype(float)
+            pixel_spacing = float(ds.ImagerPixelSpacing[0]) if 'ImagerPixelSpacing' in ds else 0.1
+        else:
+            raw_data = uploaded_file.read()
+            dt = np.dtype(dtype_choice).newbyteorder('<' if "Little" in byte_order else '>')
             image = np.frombuffer(raw_data, dtype=dt).reshape((height, width)).astype(float)
-        except Exception as e:
-            st.error(f"Rawデータの展開に失敗しました。サイズ設定を確認してください: {e}")
-
-    if image is not None:
-        st.success(f"読み込み成功: {image.shape[1]}x{image.shape[0]} px")
+            pixel_spacing = raw_pixel_spacing
+            
+        st.success(f"読み込み成功: {image.shape[1]}x{image.shape[0]} px / 画素サイズ: {pixel_spacing}mm")
         
-        # ROIサイズ選択（Raw時も必要なのでここに配置）
-        roi_size = st.select_slider("解析ROIサイズ", options=[64, 128, 256], value=128, key="main_roi")
+        # プレビュー
+        with st.expander("📷 画像プレビュー確認"):
+            fig_p, ax_p = plt.subplots()
+            ax_p.imshow(image, cmap='gray')
+            ax_p.axis('off')
+            st.pyplot(fig_p)
 
-        if st.button("RUN ANALYSIS"):
-            with st.spinner('Analyzing...'):
+        # 4. 解析実行ボタン
+        if st.button("RUN NNPS ANALYSIS"):
+            with st.spinner('解析中...'):
                 h, w = image.shape
                 avg_signal = np.mean(image)
                 step = roi_size // 2
@@ -104,7 +108,7 @@ if uploaded_file is not None:
                 u_nnps = nnps_2d[center, center:]
                 v_nnps = nnps_2d[center:, center]
 
-                # グラフ表示
+                # グラフとデータ表示
                 c1, c2 = st.columns(2)
                 with c1:
                     st.subheader("2D NNPS Map")
@@ -112,17 +116,19 @@ if uploaded_file is not None:
                     ax2.set_facecolor('#0f172a')
                     im = ax2.imshow(np.log10(nnps_2d + 1e-15), extent=[freqs[0], freqs[-1], freqs[0], freqs[-1]], cmap='viridis')
                     ax2.tick_params(colors='white')
-                    plt.colorbar(im)
                     st.pyplot(fig2)
 
                 with c2:
                     st.subheader("u-v Axis Comparison")
                     fig1 = go.Figure()
-                    fig1.add_trace(go.Scatter(x=freq_1d[1:], y=u_nnps[1:], name='u-axis (H)', line=dict(color='#38bdf8')))
-                    fig1.add_trace(go.Scatter(x=freq_1d[1:], y=v_nnps[1:], name='v-axis (V)', line=dict(color='#fb7185')))
+                    fig1.add_trace(go.Scatter(x=freq_1d[1:], y=u_nnps[1:], name='u-axis', line=dict(color='#38bdf8')))
+                    fig1.add_trace(go.Scatter(x=freq_1d[1:], y=v_nnps[1:], name='v-axis', line=dict(color='#fb7185')))
                     fig1.update_layout(template="plotly_dark", xaxis_type="log", yaxis_type="log", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig1, use_container_width=True)
 
-                # エクスポート
-                df = pd.DataFrame({"Freq_lp_mm": freq_1d[1:], "u_NNPS": u_nnps[1:], "v_NNPS": v_nnps[1:]})
-                st.download_button("Download CSV", df.to_csv(index=False).encode('utf-8'), f"nps_{uploaded_file.name}.csv", "text/csv")
+                # CSV保存
+                df = pd.DataFrame({"Freq": freq_1d[1:], "u_NNPS": u_nnps[1:], "v_NNPS": v_nnps[1:]})
+                st.download_button("Download CSV", df.to_csv(index=False).encode('utf-8'), "nnps_result.csv", "text/csv")
+
+    except Exception as e:
+        st.error(f"エラーが発生しました。設定（サイズやデータ型）を見直してください: {e}")
