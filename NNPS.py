@@ -21,7 +21,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # 3. サイドバー作成者欄
-st.sidebar.markdown(f"<div class='developer-footer'>ANALYSIS SYSTEM v3.0<br>----------<br>DEVELOPED BY:<br><strong>YOUR NAME</strong></div>", unsafe_allow_html=True)
+st.sidebar.markdown(f"<div class='developer-footer'>ANALYSIS SYSTEM v3.0<br>----------<br>DEVELOPED BY:<br><strong>MASATO　IMAHANA</strong></div>", unsafe_allow_html=True)
 
 # 4. 解析・読み込み設定
 st.sidebar.header("📁 読み込み設定")
