@@ -25,12 +25,12 @@ with st.sidebar:
     st.markdown("<div class='developer-footer'>ANALYSIS SYSTEM v3.1<br>DEVELOPED BY: MASATO IMAHANA</div>", unsafe_allow_html=True)
     st.divider()
     st.header("⚙️ Settings")
-    file_type = st.radio("File Format", ["DICOM", "Raw (Binary)"])
+    file_type = st.radio("File Format", ["Log", "Raw (Binary)"])
     
     # --- DICOM設定時の追加項目 ---
     gamma = 1.0
-    if file_type == "DICOM":
-        st.subheader("Characteristic Curve")
+    if file_type == "Log":
+        st.subheader(""有効露光量変換")
         gamma = st.number_input("特性曲線の傾き (Gradient: γ)", value=1.0, min_value=0.01, step=0.01, help="有効露光量変換に使用します。変換しない場合は1.0を入力してください。")
     
     if file_type == "Raw (Binary)":
