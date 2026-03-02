@@ -8,9 +8,9 @@ import io
 import pandas as pd
 
 # ページ基本設定
-st.set_page_config(page_title="NNPS Analyzer v3.0", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="NNPS Analyzer v3.1", layout="wide", initial_sidebar_state="expanded")
 
-# 背景デザイン
+# 背景デザイン (CSS)
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #f8fafc; }
@@ -22,10 +22,16 @@ st.markdown("""
 
 # サイドバー
 with st.sidebar:
-    st.markdown("<div class='developer-footer'>ANALYSIS SYSTEM v3.0<br>DEVELOPED BY: MASATO IMAHANA</div>", unsafe_allow_html=True)
+    st.markdown("<div class='developer-footer'>ANALYSIS SYSTEM v3.1<br>DEVELOPED BY: MASATO IMAHANA</div>", unsafe_allow_html=True)
     st.divider()
     st.header("⚙️ Settings")
     file_type = st.radio("File Format", ["DICOM", "Raw (Binary)"])
+    
+    # --- DICOM設定時の追加項目 ---
+    gamma = 1.0
+    if file_type == "DICOM":
+        st.subheader("Characteristic Curve")
+        gamma = st.number_input("特性曲線の傾き (Gradient: γ)", value=1.0, min_value=0.01, step=0.01, help="有効露光量変換に使用します。変換しない場合は1.0を入力してください。")
     
     if file_type == "Raw (Binary)":
         st.subheader("Raw Parameters")
@@ -38,8 +44,7 @@ with st.sidebar:
     st.divider()
     roi_size = st.select_slider("ROI Size", options=[64, 128, 256], value=128)
 
-# メイン画面
-st.title("Advanced NNPS Analyzer")
+st.title("🏥 Advanced NNPS Analyzer (Exposure Corrected)")
 
 def remove_trend(roi):
     y, x = np.indices(roi.shape)
@@ -60,6 +65,12 @@ if uploaded_file:
             ds = pydicom.dcmread(io.BytesIO(uploaded_file.read()))
             img = ds.pixel_array.astype(float)
             ps = float(ds.ImagerPixelSpacing[0]) if 'ImagerPixelSpacing' in ds else 0.1
+            
+            # --- 有効露光量変換 (Relative Exposure Conversion) ---
+            # NNPS解析の規約：デジタル値をγで除して「相対的な露光量変動」として扱う
+            img = img / gamma
+            st.info(f"有効露光量変換を適用しました (γ={gamma})")
+            
         else:
             raw_data = uploaded_file.read()
             dt = np.dtype(dt_choice).newbyteorder('<' if "Little" in order else '>')
@@ -75,11 +86,13 @@ if uploaded_file:
             st.pyplot(fig_p)
 
         if st.button("RUN ANALYSIS"):
-            with st.spinner('Calculating...'):
+            with st.spinner('Calculating NNPS...'):
                 img_h, img_w = img.shape
                 avg_signal = np.mean(img)
                 step = roi_size // 2
                 nps_accumulator = []
+                
+                # ROI extraction and NPS calculation
                 for y in range(0, img_h - roi_size, step):
                     for x in range(0, img_w - roi_size, step):
                         roi_data = img[y:y+roi_size, x:x+roi_size]
@@ -91,13 +104,16 @@ if uploaded_file:
                         nps_accumulator.append(ps_val)
                 
                 mean_nps = np.mean(nps_accumulator, axis=0)
+                # NNPSの定義：NPS / (平均信号値^2)
                 nnps_2d = mean_nps / (avg_signal**2)
+                
                 freqs = np.fft.fftshift(np.fft.fftfreq(roi_size, d=ps))
                 center = roi_size // 2
                 freq_1d = freqs[center:]
                 u_nnps = nnps_2d[center, center:]
                 v_nnps = nnps_2d[center:, center]
 
+                # 結果表示
                 c1, c2 = st.columns(2)
                 with c1:
                     st.subheader("2D NNPS Map")
@@ -113,7 +129,13 @@ if uploaded_file:
                     fig1.update_layout(template="plotly_dark", xaxis_type="log", yaxis_type="log", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig1, use_container_width=True)
 
-                df = pd.DataFrame({"Freq": freq_1d[1:], "u_NNPS": u_nnps[1:], "v_NNPS": v_nnps[1:]})
-                st.download_button("Download CSV", df.to_csv(index=False).encode('utf-8'), "nnps_result.csv", "text/csv")
+                df = pd.DataFrame({
+                    "Frequency(lp/mm)": freq_1d[1:], 
+                    "u_NNPS": u_nnps[1:], 
+                    "v_NNPS": v_nnps[1:],
+                    "Gamma_Used": gamma
+                })
+                st.download_button("Download CSV", df.to_csv(index=False).encode('utf-8'), "nnps_corrected_result.csv", "text/csv")
+                
     except Exception as e:
         st.error(f"Analysis Error: {e}")
